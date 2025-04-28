@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Simple Barcode Scanner</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        padding: 20px;
+      }
+      #scanner-container {
+        width: 100%;
+        max-width: 400px;
+        margin: auto;
+      }
+      video {
+        width: 100%;
+        height: auto;
+        border: 1px solid #ccc;
+      }
+      #output {
+        margin-top: 20px;
+        font-size: 1.2em;
+        color: green;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Scan Barcode</h1>
+    <div id="scanner-container"></div>
+    <div id="output">Waiting for scan...</div>
+
+    <!-- Load QuaggaJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+
+    <!-- Add a beep sound -->
+    <audio
+      id="beep"
+      src="https://www.soundjay.com/buttons/sounds/beep-07.mp3"
+      preload="auto"
+    ></audio>
+
+    <script>
+      function startScanner() {
+        Quagga.init(
+          {
+            inputStream: {
+              type: "LiveStream",
+              target: document.querySelector("#scanner-container"),
+              constraints: {
+                facingMode: "environment",
+              },
+            },
+            decoder: {
+              readers: ["ean_reader", "code_128_reader", "upc_reader"],
+            },
+          },
+          function (err) {
+            if (err) {
+              console.error(err);
+              return;
+            }
+            Quagga.start();
+          }
+        );
+
+        Quagga.onDetected(function (data) {
+          const code = data.codeResult.code;
+          document.getElementById("output").innerText = `Scanned Code: ${code}`;
+
+          document.getElementById("beep").play();
+
+          Quagga.stop();
+        });
+      }
+
+      document.addEventListener("DOMContentLoaded", startScanner);
+    </script>
+  </body>
+</html>
