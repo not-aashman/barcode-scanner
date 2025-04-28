@@ -1,81 +1,154 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Simple Barcode Scanner</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        text-align: center;
-        padding: 20px;
-      }
-      #scanner-container {
-        width: 100%;
-        max-width: 400px;
-        margin: auto;
-      }
-      video {
-        width: 100%;
-        height: auto;
-        border: 1px solid #ccc;
-      }
-      #output {
-        margin-top: 20px;
-        font-size: 1.2em;
-        color: green;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>Scan Barcode</h1>
-    <div id="scanner-container"></div>
-    <div id="output">Waiting for scan...</div>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Smart Barcode Scanner</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f9fafb;
+      color: #333;
+      text-align: center;
+    }
+    h1 {
+      color: #111;
+    }
+    #scanner-container {
+      width: 100%;
+      max-width: 600px;
+      margin: 20px auto;
+      background: #fff;
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    #barcode-list {
+      margin-top: 20px;
+      text-align: left;
+    }
+    #barcode-list ul {
+      list-style: none;
+      padding: 0;
+    }
+    #barcode-list li {
+      background: #e0f7fa;
+      margin-bottom: 8px;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    button {
+      margin: 10px 5px;
+      padding: 10px 15px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
 
-    <!-- Load QuaggaJS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+  <h1>📦 Smart Barcode Scanner</h1>
 
-    <!-- Add a beep sound -->
-    <audio
-      id="beep"
-      src="https://www.soundjay.com/buttons/sounds/beep-07.mp3"
-      preload="auto"
-    ></audio>
+  <div id="scanner-container"></div>
 
-    <script>
-      function startScanner() {
-        Quagga.init(
-          {
-            inputStream: {
-              type: "LiveStream",
-              target: document.querySelector("#scanner-container"),
-              constraints: {
-                facingMode: "environment",
-              },
-            },
-            decoder: {
-              readers: ["ean_reader", "code_128_reader", "upc_reader"],
-            },
+  <div>
+    <button id="switch-camera">Switch Camera</button>
+    <button id="clear-scans">Clear Scans</button>
+  </div>
+
+  <div id="barcode-list">
+    <h2>📋 Scanned Barcodes:</h2>
+    <ul id="scanned-items"></ul>
+  </div>
+
+  <audio id="beep-sound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg" preload="auto"></audio>
+
+  <script src="https://unpkg.com/quagga@0.12.1/dist/quagga.min.js"></script>
+  <script>
+    let isFrontCamera = false; 
+    let scanning = true;
+
+    function startScanner() {
+      Quagga.init({
+        inputStream: {
+          name: "Live",
+          type: "LiveStream",
+          constraints: {
+            width: 640,
+            height: 480,
+            facingMode: isFrontCamera ? "user" : "environment" // Switch camera
           },
-          function (err) {
-            if (err) {
-              console.error(err);
-              return;
-            }
-            Quagga.start();
-          }
-        );
+          target: document.querySelector('#scanner-container'),
+        },
+        decoder: {
+          readers: ["ean_reader", "upc_reader", "code_128_reader"]
+        },
+      }, function(err) {
+        if (err) {
+          console.error(err);
+          alert("Error starting scanner.");
+          return;
+        }
+        Quagga.start();
+      });
 
-        Quagga.onDetected(function (data) {
-          const code = data.codeResult.code;
-          document.getElementById("output").innerText = `Scanned Code: ${code}`;
+      Quagga.onDetected(handleDetected);
+    }
 
-          document.getElementById("beep").play();
+    function stopScanner() {
+      Quagga.stop();
+      Quagga.offDetected(handleDetected);
+    }
 
-          Quagga.stop();
-        });
+    function handleDetected(result) {
+      if (!scanning) return;
+
+      const code = result.codeResult.code;
+      const scannedList = document.getElementById("scanned-items");
+      
+      const listItem = document.createElement("li");
+      listItem.textContent = code;
+      scannedList.appendChild(listItem);
+
+      document.getElementById("beep-sound").play();
+      if (navigator.vibrate) {
+        navigator.vibrate(200); // Vibrate for 200ms
       }
 
-      document.addEventListener("DOMContentLoaded", startScanner);
-    </script>
-  </body>
+      scanning = false;
+      stopScanner();
+
+      setTimeout(() => {
+        if (confirm("Scan again?")) {
+          scanning = true;
+          startScanner();
+        }
+      }, 300);
+    }
+
+    document.getElementById("switch-camera").addEventListener("click", function() {
+      stopScanner();
+      isFrontCamera = !isFrontCamera;
+      startScanner();
+    });
+
+    document.getElementById("clear-scans").addEventListener("click", function() {
+      document.getElementById("scanned-items").innerHTML = "";
+    });
+
+    window.addEventListener('load', () => {
+      startScanner();
+    });
+  </script>
+
+</body>
 </html>
